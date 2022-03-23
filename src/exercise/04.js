@@ -2,10 +2,21 @@
 // http://localhost:3000/isolated/exercise/04.js
 
 import * as React from 'react'
+import {useLocalStorageState} from '../utils'
 
 function Board() {
   // 🐨 squares is the state for this component. Add useState for squares
-  const squares = Array(9).fill(null)
+  const [squares, setSquares] = useLocalStorageState(
+    'squares',
+    Array(9).fill(null),
+  )
+  const [history, setHistory] = useLocalStorageState('history', [
+    Array(9).fill(null),
+  ])
+  const [historyIndex, setHistoryIndex] = useLocalStorageState(
+    'history-index',
+    history.length - 1,
+  )
 
   // 🐨 We'll need the following bits of derived state:
   // - nextValue ('X' or 'O')
@@ -13,6 +24,25 @@ function Board() {
   // - status (`Winner: ${winner}`, `Scratch: Cat's game`, or `Next player: ${nextValue}`)
   // 💰 I've written the calculations for you! So you can use my utilities
   // below to create these variables
+  const winner = calculateWinner(squares)
+  const nextValue = calculateNextValue(squares)
+  const status = calculateStatus(winner, squares, nextValue)
+
+  const moves = history.map((_squares, index) => (
+    <li key={index}>
+      <button
+        type="button"
+        disabled={historyIndex === index}
+        onClick={() => {
+          setSquares(history[index])
+          setHistoryIndex(index)
+        }}
+        style={{display: 'block'}}
+      >
+        {historyIndex === index ? 'current step:' : null} step {index}
+      </button>
+    </li>
+  ))
 
   // This is the function your square click handler will call. `square` should
   // be an index. So if they click the center square, this will be `4`.
@@ -21,21 +51,35 @@ function Board() {
     // given square index (like someone clicked a square that's already been
     // clicked), then return early so we don't make any state changes
     //
+
+    if (winner || squares[history]) {
+      return
+    }
     // 🦉 It's typically a bad idea to mutate or directly change state in React.
     // Doing so can lead to subtle bugs that can easily slip into production.
     //
+    const squaresCopy = [...squares]
+    const historyCopy = [...history.slice(0, historyIndex + 1)]
     // 🐨 make a copy of the squares array
     // 💰 `[...squares]` will do it!)
     //
     // 🐨 set the value of the square that was selected
     // 💰 `squaresCopy[square] = nextValue`
+    squaresCopy[square] = nextValue
+    historyCopy.push(squaresCopy)
     //
     // 🐨 set the squares to your copy
+    setSquares(squaresCopy)
+    setHistory(historyCopy)
+    setHistoryIndex(historyCopy.length - 1)
   }
 
   function restart() {
     // 🐨 reset the squares
     // 💰 `Array(9).fill(null)` will do it!
+    setSquares(Array(9).fill(null))
+    setHistory([Array(9).fill(null)])
+    setHistoryIndex(0)
   }
 
   function renderSquare(i) {
@@ -49,7 +93,7 @@ function Board() {
   return (
     <div>
       {/* 🐨 put the status in the div below */}
-      <div className="status">STATUS</div>
+      <div className="status">{status}</div>
       <div className="board-row">
         {renderSquare(0)}
         {renderSquare(1)}
@@ -68,6 +112,7 @@ function Board() {
       <button className="restart" onClick={restart}>
         restart
       </button>
+      <ol>{moves}</ol>
     </div>
   )
 }
